@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KSA MOFA — Applicant Check</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛂</text></svg>">
 <style>
@@ -36,6 +37,19 @@
   .pill.off .dot{background:#c98a00}
   .pill.checking .dot{background:#98a8a1;animation:pulse 1s infinite}
   @keyframes pulse{50%{opacity:.25}}
+
+  .tabs{display:flex;gap:8px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+  .tab{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;
+    font-size:14px;font-weight:700;padding:10px 14px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--brand)}
+  .tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+  #ksaPanel{min-height:260px}
+  #ksaPanel h3{font-size:17px;margin:0 0 2px}
+  #ksaPanel h4{font-size:13.5px;color:var(--muted);margin:0 0 18px;font-weight:600}
+  #ksaPanel .ksa-form{display:grid;gap:16px}
+  #ksaPanel select.ctl:disabled{opacity:1;color:inherit;background-color:#fff;cursor:default}
+  #resultCard[hidden],#ksaResultCard[hidden]{display:none !important}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:0 1px 2px rgba(16,40,32,.04), 0 10px 30px -18px rgba(16,40,32,.18);padding:22px}
@@ -86,17 +100,61 @@
   .orig{opacity:.6;font-size:12px;margin-top:5px;font-family:"Segoe UI",Tahoma,sans-serif}
 
   /* সার্চের পর শুধু "Entered application" কার্ডটা দেখাই — ওপর/নিচের বার বাদ */
-  #resultCard{display:none;padding:0;border:0;box-shadow:none;background:transparent;
+  #resultCard,#ksaResultCard{display:none;padding:0;border:0;box-shadow:none;background:transparent;
     width:calc(100% + 2 * var(--pad));margin:16px calc(-1 * var(--pad)) 0}
-  #resultCard.show{display:block}
-  #officialFrame{display:block;margin:0;border:0;border-radius:0;background:transparent}
+  #resultCard.show,#ksaResultCard.show{display:block}
+  #officialFrame,#ksaOfficialFrame{display:block;margin:0;border:0;border-radius:0;background:transparent}
+  .ksa-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;background:#f7faf8;
+    border:1px solid var(--line);border-bottom:0;border-radius:12px 12px 0 0}
+  .ksa-actions[hidden]{display:none !important}
+  .ksa-actions .btn{padding:8px 12px;font-size:13px}
+  .pane-actions{display:flex;gap:6px;padding:8px 10px;background:#fbfcfb;border-bottom:1px solid var(--line)}
+  .pane-actions[hidden]{display:none !important}
+  .pane-actions .btn{padding:9px 13px;font-size:13px;border-radius:9px;border-width:1px;font-weight:700}
+  .pane-actions .btn[data-act="print"]{background:#e7f4ee;border-color:#bfe0d0;color:#0a6b46}
+  .pane-actions .btn:hover{filter:brightness(.96)}
+  #ksaOfficialFrame,#ksaOfficialRawFrame{border-top:1px solid var(--line)}
+
+  /* দুই ভার্শন পাশাপাশি — বাঁয়ে আমাদের card, ডানে অফিশিয়ালের হুবহু পেজ */
+  .ksa-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+  .ksa-compare[hidden]{display:none !important}
+  .ksa-pane{min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .ksa-pane[hidden]{display:none !important}
+  .ksa-pane-title{display:flex;align-items:center;gap:8px;padding:8px 11px;background:#f7faf8;
+    border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink)}
+  .ksa-pane-title .tag{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+  .ksa-pane-title .tag.ours{background:var(--brand)}
+  .ksa-pane-title .tag.official{background:#b4232a}
+  .ksa-pane-title .note{margin-left:auto;font-weight:400;font-size:11px;color:var(--muted)}
+  .ksa-pane .official-page{overflow:hidden}
+  .view-switch{display:flex;gap:4px;margin-right:auto;background:#e9efec;padding:3px;border-radius:8px}
+  .view-switch button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;
+    padding:5px 10px;border-radius:6px;cursor:pointer}
+  .view-switch button.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  @media (max-width:1100px){
+    .ksa-compare{grid-template-columns:1fr}
+  }
+  #toast{position:fixed;right:18px;bottom:18px;z-index:20000;background:#12211c;color:#fff;
+    padding:11px 16px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:13.5px;
+    opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s}
+  #toast.show{opacity:1;transform:translateY(0)}
+  @page{size:A4;margin:8mm}
   @media print{
     body{background:#fff;padding:0}
-    /* প্রিন্টে শুধু অফিশিয়াল কার্ড — ফর্মের হেডার/হিন্ট/বাটন কিছুই আসবে না */
-    header.top,#searchCard,.foot-note,#bannerHost{display:none !important}
+    /* প্রিন্টে শুধু নির্বাচিত KSA কার্ড — ফর্ম/হেডার/হিন্ট/বাটন কিছুই আসবে না */
+    header.top,.tabs,#searchCard,#ksaPanel,.foot-note,#bannerHost,
+    .ksa-actions,.pane-actions,.ksa-pane-title,#ksaMessageHost,#toast{display:none !important}
+    body[data-ksa-print] #resultCard{display:none !important}
     .wrap{padding:0}
-    .card{border:0;box-shadow:none;padding:0}
-    #resultCard{display:block !important;width:100%;margin:0}
+    .card{border:0;box-shadow:none;padding:0;margin:0}
+    #ksaResultCard{display:block !important;width:100%;margin:0}
+    /* দুই কলামের grid প্রিন্টে এক কলাম হতে হবে — নইলে বেছে নেওয়া প্যানেল অর্ধেক পাতা দখল করে */
+    .ksa-compare{display:block !important;width:100%}
+    .ksa-pane{width:100%;border:0;border-radius:0;overflow:visible}
+    #ksaOfficialFrame,#ksaOfficialRawFrame{border-top:0}
+    /* কোন প্যানেলের Print চাপা হয়েছে শুধু সেটাই প্রিন্ট হবে */
+    body[data-ksa-print="ours"] .ksa-pane[data-view="official"],
+    body[data-ksa-print="official"] .ksa-pane[data-view="ours"]{display:none !important}
   }
   details.raw{margin-top:12px}
   details.raw summary{cursor:pointer;color:var(--muted);font-size:12.5px}
@@ -120,6 +178,11 @@
     </div>
     <span class="pill checking" id="statusPill"><span class="dot"></span><span id="statusText">Checking…</span></span>
   </header>
+
+  <nav class="tabs" id="mainTabs">
+    <button type="button" class="tab active" id="tabMofa" data-tab="mofa" aria-selected="true">Mofa check</button>
+    <button type="button" class="tab" id="tabKsa" data-tab="ksa" aria-selected="false">KSA visa check</button>
+  </nav>
 
   <div id="bannerHost"></div>
 
@@ -178,6 +241,75 @@
     <div id="resultHost"></div>
   </section>
 
+  <section id="ksaPanel" class="card tab-panel" hidden>
+    <h3>Query</h3>
+    <h4>Inquiry for applied requests</h4>
+    <form id="ksaForm" class="ksa-form" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="ksaInquiryType">Inquiry type</label>
+        <select id="ksaInquiryType" name="SearchingType" class="ctl" disabled>
+          <option value="1">Application Number</option>
+          <option value="2">Visa Document Number</option>
+          <option value="3" selected>Visa Application Number</option>
+        </select>
+        <input type="hidden" id="ksaSearchingType" value="3">
+      </div>
+      <div class="field">
+        <label for="ksaApplicationNumber">Application Number</label>
+        <input id="ksaApplicationNumber" name="ApplicationNumber" class="ctl mono" placeholder="Application Number"
+               autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="ksaPassportNumber">Passport Number</label>
+        <input id="ksaPassportNumber" name="SponserID" class="ctl mono" placeholder="Passport Number"
+               autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field wide">
+        <label for="ksaCaptcha">Captcha <span class="opt">must be typed by hand</span></label>
+        <div class="captcha-row">
+          <div class="captcha-box" id="ksaCaptchaBox">
+            <div class="ph" id="ksaCaptchaPh">Image appears when the server is running</div>
+          </div>
+          <input id="ksaCaptcha" name="Captcha" class="ctl mono" maxlength="6" placeholder="6 characters"
+                 style="max-width:220px" spellcheck="false" autocomplete="off">
+          <button type="button" class="btn icon" id="ksaBtnRefresh" title="New captcha">⟳</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn primary" id="ksaBtnSearch">Search</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" id="ksaResultCard" hidden>
+    <div class="ksa-actions" id="ksaActions" hidden>
+      <div class="view-switch" id="ksaViewSwitch" role="group" aria-label="Result view">
+        <button type="button" data-view="both" class="active">Both</button>
+        <button type="button" data-view="ours">Amar page</button>
+        <button type="button" data-view="official">Official</button>
+      </div>
+    </div>
+    <div id="ksaMessageHost"></div>
+    <div class="ksa-compare" id="ksaCompare">
+      <div class="ksa-pane" data-view="ours">
+        <div class="ksa-pane-title"><span class="tag ours"></span>Amar page<span class="note">local render</span></div>
+        <div class="pane-actions" data-pane="ours">
+          <button type="button" class="btn" data-act="print">🖨 Print</button>
+        </div>
+        <div id="ksaResultHost"></div>
+      </div>
+      <div class="ksa-pane" data-view="official">
+        <div class="ksa-pane-title"><span class="tag official"></span>Official page<span class="note">exact portal HTML</span></div>
+        <div class="pane-actions" data-pane="official">
+          <button type="button" class="btn" data-act="print">🖨 Print</button>
+        </div>
+        <div id="ksaOfficialRawHost"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
   <p class="foot-note" style="text-align:center;margin-top:22px">
     Local tool · requests go straight from your machine to <code>visa.mofa.gov.sa</code>, no third-party server involved.
   </p>
@@ -196,6 +328,10 @@
   let formReady = false;
   let busy = false;
   let lastResult = null;     // { html, meta }
+  let ksaFormReady = false;
+  let ksaBusy = false;
+  let ksaResultShown = false;
+  let ksaView = "both";
 
   // ---------- dropdowns ----------
   function label(item) {
@@ -322,6 +458,72 @@
     }
   }
 
+  // KSA visa check: homepage "Query" form-এর নতুন captcha (আলাদা session state, আগের ফর্মের সাথে মেশে না)
+  async function loadKsaCaptcha() {
+    const box = $("ksaCaptchaBox");
+    try {
+      const data = await apiJson("/api/ksa/form");
+      ksaFormReady = true;
+      box.innerHTML = "";
+      const img = new Image();
+      img.alt = "captcha";
+      img.src = "/api/captcha?k=" + encodeURIComponent(data.captchaKey) + "&r=" + Math.random();
+      img.onerror = () => { box.innerHTML = '<div class="ph">Image failed<br>click ⟳</div>'; };
+      box.appendChild(img);
+      $("ksaCaptcha").value = "";
+    } catch (err) {
+      ksaFormReady = false;
+      box.innerHTML = '<div class="ph">Captcha needs the<br>local server</div>';
+      showOfflineHelp(String(err.message || err));
+    }
+  }
+
+  // Mofa সার্চের পর KSA ট্যাবটা প্রস্তুত করে দিই — captcha কখনো অটো টাইপ করি না
+  function findMofaApplicationNo() {
+    const sr = $("officialFrame") && $("officialFrame").shadowRoot;
+    let text = sr ? (sr.textContent || "") : "";
+    try {
+      const doc = new DOMParser().parseFromString((lastResult && lastResult.html) || "", "text/html");
+      text += "\n" + (doc.body ? doc.body.textContent : "");
+    } catch { /* ignore */ }
+    const labeled = text.match(/(?:Application\s*(?:No\.?|Number)|رقم الطلب)\s*[:：]?\s*([A-Z]?\d{6,12})/i);
+    if (labeled) return labeled[1].toUpperCase();
+    const generic = text.match(/\bE\d{6,12}\b/i);
+    return generic ? generic[0].toUpperCase() : "";
+  }
+
+  // শুধু "Visa has been issued" পপআপ এলে KSA ট্যাবে নিয়ে যাব — অন্য ফলাফলে Mofa-তেই থাকব
+  function mofaIssuedVisaInfo() {
+    const frame = $("officialFrame");
+    const sr = frame && frame.shadowRoot;
+    if (!sr) return null;
+    const modal = sr.getElementById("frameModal");
+    if (!modal || (!modal.classList.contains("in") && getComputedStyle(modal).display === "none")) return null;
+    const title = (sr.getElementById("frameModalTitle") || {}).textContent || "";
+    const text = ((sr.getElementById("frameModalText") || {}).textContent || "").replace(/\s+/g, " ").trim();
+    if (!/Visa has been issued|تم إصدار التأشيرة/i.test(text)) return null;
+    const num = text.match(/\b\d{8,12}\b/);
+    return { title: title.trim(), text, visaNo: num ? num[0] : "" };
+  }
+
+  async function maybeAutoKsa(passportNumber) {
+    if (!mofaIssuedVisaInfo()) return false;
+    await autoFillKsaFromMofa(passportNumber);
+    return true;
+  }
+
+  async function autoFillKsaFromMofa(passportNumber) {
+    $("ksaPassportNumber").value = (passportNumber || "").trim().toUpperCase();
+    const appNo = findMofaApplicationNo();
+    if (appNo) $("ksaApplicationNumber").value = appNo;
+    $("ksaCaptcha").value = "";
+    await loadKsaCaptcha();
+    selectTab("ksa");
+    showToast(appNo
+      ? "Passport + application filled — type the KSA captcha"
+      : "Passport filled — type application no. + KSA captcha");
+  }
+
   let offlineShown = false;
   function showOfflineHelp(reason) {
     if (offlineShown) return;
@@ -338,16 +540,32 @@
   const ALLOWED = new Set([
     "DIV","SPAN","P","BR","HR","B","STRONG","I","EM","U","SMALL","LABEL","A",
     "TABLE","THEAD","TBODY","TFOOT","TR","TD","TH","CAPTION","UL","OL","LI",
-    "H1","H2","H3","H4","H5","H6","PRE","DL","DT","DD","IMG"
+    "H1","H2","H3","H4","H5","H6","PRE","DL","DT","DD","IMG","FORM"
   ]);
 
-  // অফিশিয়াল ইনলাইন স্টাইল (যেমন color:#790018) রাখি, কিন্তু url()/expression()/@import বাদ দিই
-  const UNSAFE_STYLE = /@import|expression\s*\(|url\s*\(/gi;
-  function safeStyle(value) {
-    return String(value || "").replace(UNSAFE_STYLE, "").trim();
+  // পোর্টালের html font-size 62.5% (1rem = 10px)। shadow DOM-এ rem আসলে 16px হয়,
+  // তাই অফিশিয়াল CSS-এর rem-কে px-এ বদলে দিই — নইলে মার্জিন/ফন্ট/উচ্চতা ভেঙে যায়।
+  const REM = /(-?\d*\.?\d+)rem\b/gi;
+  function portalRem(value) {
+    return String(value || "").replace(REM, (m, n) => {
+      const v = parseFloat(n) * 10;
+      return (Number.isInteger(v) ? String(v) : String(Number(v.toFixed(3)))) + "px";
+    });
   }
 
-  function sanitize(html) {
+  // অফিশিয়াল ইনলাইন স্টাইল (যেমন color:#790018) রাখি; বাইরের url()/@import/expression বাদ দিই।
+  // data:image/... এবং /assets/... ছবি অফিশিয়াল কার্ডের অংশ — এগুলো রাখতেই হবে, নইলে ব্যাকগ্রাউন্ড ভেঙে যায়।
+  const UNSAFE_STYLE = /@import|expression\s*\(/gi;
+  function safeStyle(value) {
+    return portalRem(String(value || "")
+      .replace(UNSAFE_STYLE, "")
+      .replace(/url\(\s*(['"]?)([^)]+?)\1\s*\)/gi, (m, _q, u) =>
+        /^(data:image\/|\/assets\/)/i.test(String(u).trim()) ? m : ""))
+      .trim();
+  }
+
+  function sanitize(html, opts) {
+    opts = opts || {};
     const doc = new DOMParser().parseFromString(html, "text/html");
     const out = document.createElement("div");
     const walk = (src, dst) => {
@@ -358,12 +576,15 @@
         // FORM-এর ভেতরেই পোর্টাল ফলাফল ( nmreq, declaration ) রাখে — ফর্ম ট্যাগ বাদ দিয়ে ভেতরের contents রাখি
         if (["SCRIPT","STYLE","LINK","META","IFRAME","FRAME","OBJECT","EMBED","INPUT",
              "SELECT","TEXTAREA","BUTTON","SVG","VIDEO","AUDIO","CANVAS"].includes(tag)) continue;
-        // লুকানো ব্লক (error modal, cookie bar, dropdown menu) বাদ — নইলে ওদের লেখা ফলাফল ভেবে ভুল হয়
+        // সাধারণত লুকানো ব্লক (error modal, cookie bar, dropdown menu) বাদ দিই।
+        // ইস্যু করা ভিসার অফিশিয়াল কার্ডে কিছু সারি display:none — সেটা আসল DOM-এর অংশ,
+        // সেগুলো কাটলে লেআউট ভেঙে যায়, তাই সেখানে আসল class/style সহ রাখি।
         const style = (node.getAttribute("style") || "").toLowerCase();
         const cls = (node.getAttribute("class") || "").toLowerCase().split(/\s+/);
         const skipClasses = ["modal", "fade", "hidden", "hide", "dropdown-menu", "navbar"];
-        if (node.hasAttribute("hidden") || /display\s*:\s*none/.test(style) ||
-            cls.some((c) => skipClasses.includes(c))) continue;
+        if (!opts.preserveHidden &&
+            (node.hasAttribute("hidden") || /display\s*:\s*none/.test(style) ||
+             cls.some((c) => skipClasses.includes(c)))) continue;
         if (!ALLOWED.has(tag)) { walk(node, dst); continue; }
         const el = document.createElement(tag.toLowerCase());
         // ছবিগুলো লোকাল প্রক্সি দিয়ে আনি — পোর্টালের session cookie ব্রাউজারের থাকে না
@@ -379,10 +600,22 @@
             local = "/api/captcha?k=" + encodeURIComponent(m[1]);
           } else if (/\/assets\/common\/images\/MOFA_logo\.png/i.test(src)) {
             local = "/api/image?type=logo";
+          } else if (/^data:image\/(png|jpe?g|gif|webp|svg\+xml);/i.test(src)) {
+            // ইস্যু করা ভিসার ছবিগুলো পেজেই embedded থাকে — এগুলো সরাসরি রাখি
+            local = src;
+          } else if (/^\/assets\//i.test(src)) {
+            // বাকি লোগো/আইকন একই local proxy দিয়ে আনি
+            local = src;
           }
           if (!local) continue;
           el.setAttribute("src", local);
-          el.setAttribute("alt", node.getAttribute("alt") || (local.includes("photo") ? "Applicant photo" : "Barcode"));
+          // অফিশিয়াল প্যানেলে alt হুবহু রাখি (খালি alt-ও খালিই থাকে) — আমাদের প্যানেলে আগের মতো fallback দিই
+          const originalAlt = node.getAttribute("alt");
+          if (opts.exactAlt) {
+            if (originalAlt !== null) el.setAttribute("alt", originalAlt);
+          } else {
+            el.setAttribute("alt", originalAlt || (local.includes("photo") ? "Applicant photo" : "Barcode"));
+          }
           for (const attr of ["id", "class", "width", "height"]) {
             const v = node.getAttribute(attr);
             if (v) el.setAttribute(attr, v);
@@ -404,6 +637,8 @@
       }
     };
     walk(doc.body, out);
+    // ইস্যু করা ভিসার কার্ডে অতিরিক্ত wrapper div চাই না — অফিশিয়াল DOM-এ <form> সরাসরি থাকে
+    if (opts.unwrap && out.children.length === 1) return out.firstElementChild;
     return out;
   }
 
@@ -479,31 +714,77 @@
 
   // অফিশিয়াল পোর্টালের CSS-গুলো shadow DOM-এর ভেতরে লোড করি।
   // /assets/... প্রক্সি CSS-এর ভেতরের relative URL-ও local path-এ বদলে দেয়।
+  // অফিশিয়াল PrintApplication পেজে stylesheet-গুলো যে ক্রমে লোড হয়, ঠিক সেই ক্রম:
+  // jtable/calendars আগে, তারপর portal CSS, print.css, তারপর PrintVisaPdfStyle.css,
+  // আর সবশেষে পেজের নিজস্ব inline <style> (নিচে inlineCss)। ক্রম বদলালে কার্ড ভেঙে যায়।
   const PORTAL_LINKS = [
     "/assets/common/plugins/font-awesome/css/font-awesome.min.css",
     "/assets/common/plugins/bootstrap/css/bootstrap.min.ltr.css",
     "/assets/common/plugins/select2/select2.css",
+    "/assets/common/plugins/jtable/themes/basic/jtable_basic.css",
+    "/assets/ltr/plugins/jquery.calendars/jquery.calendars.picker.css",
+    "/assets/ltr/plugins/jquery.calendars/smoothness.calendars.picker.css",
     "/assets/ltr/css/components-rounded.css",
     "/assets/ltr/css/plugins.css",
     "/assets/ltr/css/layout.css",
     "/assets/common/plugins/jquery-ui/jquery-ui.min.css",
     "/assets/ltr/css/custom.v3.css?v=202319121",
     "/assets/ltr/css/internal.v3.css",
-    "/assets/ltr/css/print.css"
-  ].map((href, i) => `<link rel="stylesheet" href="${href}"${i === 9 ? ' media="print"' : ""}>`).join("\n");
+    "/assets/ltr/css/print.css",
+    "/assets/common/css/PrintVisaPdfStyle.css?v=20231219"
+  ].map((href) => `<link rel="stylesheet" href="${href}"${href === "/assets/ltr/css/print.css" ? ' media="print"' : ""}>`).join("\n");
 
-  function officialShell() {
-    // শুধু অফিশিয়াল "Entered application" কার্ড + ShowMessage মোডাল; হেডার/ফুটার/বার বাদ
-    // কোনো custom font/padding/grid override নেই — পোর্টালের নিজস্ব CSS-ই মাপ ঠিক করবে
-    return `
-<style>
-  :host{display:block;background:#fff;color:#403f68;font:17px/1.42857143 "Open Sans",sans-serif}
-  .official-page{background:#fff}
-  .official-page #frameModal{display:none}
-  .official-page #frameModal.in{display:block}
-</style>
-${PORTAL_LINKS}
-<div class="official-page lang-en">
+  // shadow DOM-এর link stylesheet-এর @font-face ক্রোম সবসময় লোড করে না — ফলে Arabic/MRZ ফন্ট
+  // fallback-এ দেখায়, শব্দ ভেঙে কার্ডের উচ্চতা বদলে যায়। ফন্টগুলো once main document-এ দিই।
+  const FONT_CSS_PATHS = [
+    "/assets/ltr/css/layout.css",
+    "/assets/common/css/PrintVisaPdfStyle.css?v=20231219",
+    "/assets/common/plugins/bootstrap/css/bootstrap.min.ltr.css"
+  ];
+  let fontPromise = null;
+  function ensurePortalFonts() {
+    if (fontPromise) return fontPromise;
+    fontPromise = (async () => {
+      try {
+        const chunks = [];
+        for (const path of FONT_CSS_PATHS) {
+          const text = await (await fetch(path, { cache: "no-store" })).text();
+          const faces = text.match(/@font-face\s*\{[^}]*\}/gi) || [];
+          chunks.push(...faces);
+        }
+        const css = portalRem(chunks.join("\n").replace(/@import|expression\s*\(/gi, ""));
+        if (!css) return;
+        let style = document.getElementById("__portalFonts");
+        if (!style) {
+          style = document.createElement("style");
+          style.id = "__portalFonts";
+          document.head.appendChild(style);
+        }
+        style.textContent = css;
+        if (document.fonts && document.fonts.load) {
+          const sample = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 صالحة اعتباراً من مدة الإقامة بنجلاديش";
+          await Promise.all([
+            document.fonts.load('15.3px "Open Sans"', sample),
+            document.fonts.load('normal 300 15.3px "Open Sans"', sample),
+            document.fonts.load('normal 700 15.3px "Open Sans"', sample),
+            document.fonts.load('17px "OCRB Regular"', "A142009602BGD0301200151170220341")
+          ]).catch(() => {});
+        }
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      } catch { /* ফন্ট না এলেও কার্ড দেখাবে */ }
+    })();
+    return fontPromise;
+  }
+
+  function officialShell(extraCss, direct, lean) {
+    // অফিশিয়াল পেজের body-context (html.no-js.en → body.lang-en → .page-container → .page-content)
+    // হুবহু রাখি, শুধু হেডার/ফুটার/বার বাদ দিই। কোনো custom font/padding/grid override নেই।
+    // ইস্যু করা ভিসার পেজে form সরাসরি .page-content-inner-এ থাকে; অন্য ফলাফলে row/col-md-12 থাকে।
+    const slot = direct
+      ? '<div id="officialPortletSlot"></div>'
+      : '<div class="row"><div class="col-md-12" id="officialPortletSlot"></div></div>';
+    // অফিশিয়াল প্যানেলে শুধু ফলাফল চাই — বাইরের modal-এর "Visa platform / Close" লেখা চাই না
+    const modal = lean ? "" : `
   <div id="msg" class="hidden-print">
     <div class="modal fade" id="frameModal" style="z-index:11050" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog" role="document"><div class="modal-content">
@@ -517,38 +798,124 @@ ${PORTAL_LINKS}
         <div class="modal-footer"><button type="button" class="btn green" id="frameModalClose">Close</button></div>
       </div></div>
     </div>
+  </div>`;
+    return `
+<style>
+  :host{display:block;background:#fff;color:#403f68;font:17px/1.42857143 "Open Sans",sans-serif;position:relative}
+  .official-page{background:#fff;color:#403f68;font:17px/1.42857143 "Open Sans",sans-serif;min-height:100%;position:relative}
+  .official-page #frameModal{display:none}
+  .official-page #frameModal.in{display:block}
+</style>
+${PORTAL_LINKS}
+${extraCss || ""}
+${lean ? `<style>
+  /* Official pane: প্রতিটি লাইনের নিচে একটিমাত্র লম্বা দাগ, ফাঁকা row-র অতিরিক্ত দাগ বাদ */
+  .evisa-container .col-3{border-top:0 !important;border-bottom:1px solid #553678 !important;
+    margin-bottom:5px !important;padding-bottom:7px !important}
+  .evisa-container .col-3.max-duration,
+  .evisa-container .col-3.notes-seprator{border-bottom:1px solid #553678 !important;margin-bottom:5px !important}
+  .evisa-container .col-3:empty{display:none !important}
+</style>` : ""}
+<div class="official-page lang-en">${modal}
+  <div class="page-container">
+    <div class="page-content" id="content"><div class="container"><div class="page-content-inner">
+      ${slot}
+    </div></div></div>
   </div>
-  <div class="page-content" id="content"><div class="container"><div class="page-content-inner">
-    <div class="row"><div class="col-md-12" id="officialPortletSlot"></div></div>
-  </div></div></div>
 </div>`;
   }
 
-  async function renderResult(rawHtml, meta) {
-    lastResult = { html: rawHtml, meta };
-    const card = $("resultCard");
-    const host = $("resultHost");
+  async function renderResult(rawHtml, meta, opts) {
+    opts = opts || {};
+    const cardId = opts.cardId || "resultCard";
+    const hostId = opts.hostId || "resultHost";
+    const frameId = opts.frameId || "officialFrame";
+    const silent = !!opts.silent;
+    if (!silent) lastResult = { html: rawHtml, meta };
+    const card = $(cardId);
+    const host = $(hostId);
     host.innerHTML = "";
+    await ensurePortalFonts();
 
     const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+    // ফলাফল পেজের নিজস্ব inline <style>গুলোও অফিশিয়াল লুকের অংশ — নিরাপদ করে রাখি
+    const inlineCss = Array.from(doc.querySelectorAll("style"))
+      .map((s) => safeStyle(s.textContent || ""))
+      .filter(Boolean)
+      .map((css) => "<style>" + css + "</style>")
+      .join("\n");
     // ".portlet" নিলে "Entered application" শিরোনামও সাথে আসে (অফিশিয়াল পেজের মতো)
     const hasPortlet = !!doc.querySelector(".portlet");
+    const isEvisa = !!doc.querySelector(".evisa-container");
     const block = doc.querySelector(".portlet") || doc.querySelector(".portlet-body") || doc.querySelector("form") || doc.body;
-    const clean = sanitize(block.outerHTML);
+    const clean = sanitize(block.outerHTML, {
+      preserveHidden: isEvisa,
+      unwrap: isEvisa,
+      exactAlt: !!opts.exactAlt
+    });
+    // অফিশিয়াল প্যানেল: লুকানো সারিগুলোর element থাকবে (DOM/nth-child ঠিক থাকবে),
+    // কিন্তু ভেতরের লেখা খালি করে দিই — কোনো টেক্সট এক্সট্র্যাক্টে বাড়তি লাইন আসবে না।
+    if (opts.stripHiddenText) {
+      // অফিশিয়াল প্যানেলে কখনোই বাড়তি লেবেল দেখা যাবে না — inline display:none হোক বা class-hidden
+      // তুমি যে "বাড়তি" লাইনগুলো চিহ্নিত করেছ — official pane-এ এগুলো কখনোই আসবে না
+      const forbidden = new Set([
+        "Purpose", "Entry Type", "Sponsor name", "Sponsor Name", "Agency Name",
+        "Car No.", "ID No.", "Relationship", "Visa platform", "Close", "×",
+        "WORK", "7031923548", "mazed air international 1868", "SV 807",
+        "الغرض", "عدد مرات الدخول", "سفرة واحدة - Single", "رقم الإقامة",
+        "صلة القرابة", "اسم العائل", "اسم الجهة", "رقم السيارة", "رقم الهوية"
+      ]);
+      // আগে পুরো row বাদ দিই — নইলে লেবেলের লেখা মুছে গেলে শনাক্ত করা যাবে না
+      clean.querySelectorAll(".col-3").forEach((row) => {
+        const t = (row.textContent || "").replace(/\s+/g, " ").trim();
+        if (!t || [...forbidden].some((k) => t.includes(k))) row.remove();
+      });
+      //Sponsor আর Employer-এ একই নাম দুবার এলে শুধু Employer-টাই রাখি
+      const employerRows = [...clean.querySelectorAll(".col-3")]
+        .filter((row) => (row.textContent || "").includes("مؤسسة سالم ال فهاد"));
+      if (employerRows.length > 1) {
+        const keep = employerRows.find((row) =>
+          /Employer name|اسم صاحب العمل/.test(row.textContent || "")) || employerRows[employerRows.length - 1];
+        employerRows.forEach((row) => { if (row !== keep) row.remove(); });
+      }
+      clean.querySelectorAll("*").forEach((el) => {
+        const st = (el.getAttribute("style") || "").replace(/\s+/g, "").toLowerCase();
+        const cls = (el.getAttribute("class") || "").toLowerCase();
+        if (/display:none/.test(st) || /\bhidden\b/.test(cls)) {
+          el.remove();   // লুকানো row-টা সম্পূর্ণ বাদ — ফাঁকা লাইনও থাকবে না
+          return;
+        }
+        // class-worksheet-এ হিডেন হলেও লেখা বাদ দিই
+        [...el.childNodes].forEach((node) => {
+          if (node.nodeType === 3 && forbidden.has(node.textContent.trim())) node.textContent = "";
+        });
+      });
+      // HTML-এর ইন্ডেন্টেশন থেকে আসা খালি লাইনগুলো সরাই (যেমন "مؤسسة سالم ال فهاد"-এর আশেপাশে)
+      const walker = document.createTreeWalker(clean, NodeFilter.SHOW_TEXT);
+      const blankNodes = [];
+      while (walker.nextNode()) {
+        if (/^\s+$/.test(walker.currentNode.textContent)) blankNodes.push(walker.currentNode);
+      }
+      // শুধু ফাঁকা whitespace নোড সরাই; বাকি text node থাকায় লাইনভাঙা অটুট থাকে।
+      blankNodes.forEach((node) => node.remove());
+    }
 
     // অনুবাদের আগেই আসল লেখা ধরে রাখি — নইলে "no results" বার্তা অনুবাদ হয়ে গিয়ে চেনা যায় না
     const rawText = (clean.textContent || "").replace(/\s+/g, " ").trim();
     const notFound = /لم يتم العثور على اي نتائج|لا توجد نتائج|no results found/i.test(rawText);
     const failed = !notFound && (/عفوا حدث خطأ|unexpected error/i.test(rawText) || rawText.length < 25);
     const msgs = portalMessages(rawHtml).map((m) => ({ ...m, en: translateMessage(m.text) }));
-    const showDetails = hasPortlet && !notFound && !failed && (clean.textContent || "").replace(/\s+/g, "").length > 40;
+    // Query-ফলাফলে .portlet থাকে না — form-এর ভেতরের কার্ডও দেখাতে হবে
+    const showDetails = !notFound && !failed && (clean.textContent || "").replace(/\s+/g, "").length > 40;
+    const officialActions = hasPortlet;   // Print/Back শুধু সেই অফিশিয়াল পেজে যেখানে সেটা আছে
 
-    translateTree(clean);
+    if (!opts.skipTranslate) translateTree(clean);
 
     // অফিশিয়াল পেজটা সরাসরি ফর্মের নিচে বসাই — নতুন ট্যাব বা অতিরিক্ত ক্লিক নেই
     const frame = document.createElement("div");
-    frame.id = "officialFrame";
-    frame.attachShadow({ mode: "open" }).innerHTML = officialShell();
+    frame.id = frameId;
+    frame.attachShadow({ mode: "open" })
+      .innerHTML = officialShell(inlineCss, isEvisa, !!opts.lean);
     host.appendChild(frame);
     const sr = frame.shadowRoot;
 
@@ -566,23 +933,25 @@ ${PORTAL_LINKS}
 
     if (showDetails) {
       slot.appendChild(clean);
-      const actions = document.createElement("div");
-      actions.className = "form-actions fluid right";
-      // অফিশিয়াল result page-র হুবহু markup
-      actions.innerHTML = '<div class="row"><div class="col-md-12">' +
-        '<input id="printPage" type="button" class="btn btn-default pull-left" value=Print onclick="javascript: window.print();" />' +
-        '<a class="btn btn-default" href="/"><span>Back</span></a>' +
-        '</div></div>';
-      // অফিশিয়াল portlet-এর ভেতরেই বাটনগুলো বসে — বাইরে নয়
-      (clean.querySelector(".form-body") || clean.querySelector(".portlet-body") || clean).appendChild(actions);
+      if (officialActions && !opts.noInject) {
+        const actions = document.createElement("div");
+        actions.className = "form-actions fluid right";
+        // অফিশিয়াল result page-র হুবহু markup
+        actions.innerHTML = '<div class="row"><div class="col-md-12">' +
+          '<input id="printPage" type="button" class="btn btn-default pull-left" value=Print onclick="javascript: window.print();" />' +
+          '<a class="btn btn-default" href="/"><span>Back</span></a>' +
+          '</div></div>';
+        // অফিশিয়াল portlet-এর ভেতরেই বাটনগুলো বসে — বাইরে নয়
+        (clean.querySelector(".form-body") || clean.querySelector(".portlet-body") || clean).appendChild(actions);
 
-      // ইনলাইন onclick-এর পাশাপাশি jQuery হ্যান্ডলার থাকে; দুইবার print না ঠেকাতে
-      // capture-phasে সেটা আটকিয়ে অফিশিয়াল CSS-টুইকসহ একবার print করি
-      sr.addEventListener("click", (e) => {
-        if (!e.target || e.target.id !== "printPage") return;
-        e.stopPropagation();
-        officialPrint(frame);
-      }, true);
+        // ইনলাইন onclick-এর পাশাপাশি jQuery হ্যান্ডলার থাকে; দুইবার print না ঠেকাতে
+        // capture-phasে সেটা আটকিয়ে অফিশিয়াল CSS-টুইকসহ একবার print করি
+        sr.addEventListener("click", (e) => {
+          if (!e.target || e.target.id !== "printPage") return;
+          e.stopPropagation();
+          officialPrint(frame);
+        }, true);
+      }
     } else {
       const alert = document.createElement("div");
       alert.className = "alert " + (failed ? "alert-danger" : "alert-warning");
@@ -596,8 +965,8 @@ ${PORTAL_LINKS}
       slot.appendChild(alert);
     }
 
-    // পোর্টালের ShowMessage() ডায়ালগ — অফিশিয়াল পেজের মতোই
-    if (msgs.length) {
+    // পোর্টালের ShowMessage() ডায়ালগ — অফিশিয়াল পেজের মতোই (দুই প্যানেলে ডুপ্লিকেট চাই না)
+    if (msgs.length && !opts.noMessages) {
       sr.getElementById("frameModalTitle").textContent = msgs[0].title || "Visa platform";
       sr.getElementById("frameModalText").textContent = msgs.map((m) => m.en).join("\n");
       const modal = sr.getElementById("frameModal");
@@ -605,10 +974,19 @@ ${PORTAL_LINKS}
       modal.classList.add("in");
       modal.setAttribute("aria-hidden", "false");
     }
-    sr.getElementById("frameModalClose").addEventListener("click", () => closeFrameModal(frame));
-    sr.getElementById("frameModalX").addEventListener("click", () => closeFrameModal(frame));
+    const closeBtn = sr.getElementById("frameModalClose");
+    const xBtn = sr.getElementById("frameModalX");
+    if (closeBtn) closeBtn.addEventListener("click", () => closeFrameModal(frame));
+    if (xBtn) xBtn.addEventListener("click", () => closeFrameModal(frame));
 
-    card.classList.add("show");
+    if (!silent) {
+      card.hidden = false;
+      card.classList.add("show");
+      if (cardId === "ksaResultCard") {
+        $("ksaActions").hidden = !showDetails;
+        $("ksaCompare").querySelectorAll(".pane-actions").forEach((el) => { el.hidden = !showDetails; });
+      }
+    }
   }
 
   // ---------- actions ----------
@@ -658,6 +1036,7 @@ ${PORTAL_LINKS}
         body: JSON.stringify(payload)
       });
       await renderResult(res.html, new Date().toLocaleTimeString());
+      await maybeAutoKsa(payload.PassportNumber);
     } catch (err) {
       $("resultCard").classList.add("show");
       $("resultHost").innerHTML =
@@ -667,7 +1046,219 @@ ${PORTAL_LINKS}
       btn.disabled = false;
       btn.innerHTML = original;
       loadCaptcha();
-      $("captcha").focus();
+      if (!$("searchCard").hidden) $("captcha").focus();
+    }
+  }
+
+  function ksaMessage(kind, icon, html) {
+    ksaResultShown = true;
+    const card = $("ksaResultCard");
+    card.hidden = false;
+    card.classList.add("show");
+    $("ksaActions").hidden = true;
+    $("ksaCompare").hidden = true;
+    $("ksaCompare").querySelectorAll(".pane-actions").forEach((el) => { el.hidden = true; });
+    $("ksaMessageHost").innerHTML =
+      `<div class="banner ${kind}"><span class="ico">${icon}</span><div>${html}</div></div>`;
+  }
+
+  let toastTimer = null;
+  function showToast(text) {
+    const t = $("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  // প্রতি প্যানেলের নিজস্ব অ্যাকশন — যেটার বাটন চাপা হবে শুধু সেটার উপর কাজ করবে
+  function ksaPrint(pane) {
+    const which = pane === "official" ? "official" : "ours";
+    const frame = $(which === "official" ? "ksaOfficialRawFrame" : "ksaOfficialFrame");
+    const sr = frame && frame.shadowRoot;
+    const savedFrameStyle = frame ? frame.getAttribute("style") : null;
+    const restoreStyles = [];
+
+    if (sr) {
+      // পোর্টালের নিজস্ব max-width / padding / scrollable responsive-container card-টিকে
+      // ছোট দেখায়। প্রিন্টের সময় সব-wrapper কে 100% দিই — A4 printable area ফিল করবে।
+      const apply = (selector, extra) => {
+        sr.querySelectorAll(selector).forEach((el) => {
+          const saved = el.getAttribute("style");
+          restoreStyles.push(() => {
+            if (saved === null) el.removeAttribute("style");
+            else el.setAttribute("style", saved);
+          });
+          const set = (prop, value) => el.style.setProperty(prop, value, "important");
+          set("width", "100%");
+          set("max-width", "none");
+          set("min-width", "0");
+          set("box-sizing", "border-box");
+          set("margin", "0");
+          set("padding", "0");
+          if (extra) extra(set);
+        });
+      };
+      apply(".official-page, .container, .page-content-inner, #officialPortletSlot, #officialPortletSlot > *");
+      apply(".responsive-container", (set) => set("overflow", "visible"));
+      apply(".evisa-container");
+
+      if (which === "ours") {
+        // আমাদের প্যানেলটা এক পাতায় আনতে A4 printable box-এ মেপে সবচেয়ে বড় zoom বাছি।
+        // zoom কমালে লাইন কম ভাঙে — তাই উচ্চতা রৈখিকভাবে না কমে অনেক কমে যায়।
+        const mmToPx = 96 / 25.4;
+        const printableW = (210 - 2 * 8) * mmToPx;
+        const printableH = (297 - 2 * 8) * mmToPx;
+        let fit = 0.7;
+        for (let step = 0; step <= 30; step++) {
+          const z = Number((1 - step * 0.01).toFixed(2));
+          // zoom frame-এর_fixed width-কেও scale করে — তাই আগে থেকে ভাগ দিই
+          frame.style.setProperty("width", (printableW / z).toFixed(2) + "px", "important");
+          frame.style.setProperty("zoom", String(z), "important");
+          // ১২px安全_margin রাখি, যাতে ছোট font/margin difference-এও ২য় পাতা না আসে
+          if (frame.getBoundingClientRect().height <= printableH - 12) { fit = z; break; }
+        }
+        frame.style.setProperty("width", (printableW / fit).toFixed(2) + "px", "important");
+        frame.style.setProperty("zoom", String(fit), "important");
+      } else {
+        // অফিশিয়াল প্যানেল আগের মতোই থাক — কোনো extra scaling নেই
+        frame.style.setProperty("width", "100%", "important");
+        frame.style.setProperty("zoom", "1", "important");
+      }
+    }
+
+    document.body.dataset.ksaPrint = which;
+    let done = false;
+    const cleanup = () => {
+      if (done) return;
+      done = true;
+      restoreStyles.forEach((fn) => fn());
+      if (frame) {
+        if (savedFrameStyle === null) frame.removeAttribute("style");
+        else frame.setAttribute("style", savedFrameStyle);
+      }
+      if (document.body.dataset.ksaPrint === which) delete document.body.dataset.ksaPrint;
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup, { once: true });
+    setTimeout(cleanup, 1500);
+    window.print();
+  }
+
+  // ---------- দুই প্যানেল: আমাদের রেন্ডার + অফিশিয়ালের হুবহু পেজ ----------
+  function fitKsaPanes() {
+    const compare = $("ksaCompare");
+    if (!compare || compare.hidden) return;
+    compare.querySelectorAll(".ksa-pane").forEach((pane) => {
+      const frame = pane.querySelector("#ksaOfficialFrame, #ksaOfficialRawFrame");
+      if (!frame) return;
+      const avail = pane.clientWidth - 2;   // 1px border each side
+      if (avail <= 0) return;
+
+      //Fixed 794 ধরলে evisa-container-এর negative right margin-এর কারণে ডান কাটা যায়।
+      //তাই 100% zoom-এ আসল প্রস্থ মেপে তার সাথে মিলাই — ব্রাউজার zoom-ও এভাবেই ধরা পড়ে।
+      const previous = frame.style.zoom;
+      frame.style.zoom = "1";
+      const frameRect = frame.getBoundingClientRect();
+      const evisa = frame.shadowRoot && frame.shadowRoot.querySelector(".evisa-container");
+      const right = evisa ? evisa.getBoundingClientRect().right : frameRect.right;
+      const natural = Math.max(frameRect.width, right - frameRect.left, 1);
+      frame.style.zoom = previous || "";
+
+      const scale = Math.min(1, avail / natural);
+      frame.style.zoom = scale < 0.995 ? String(Number(scale.toFixed(3))) : "";
+    });
+  }
+
+  function selectKsaView(view) {
+    ksaView = ["both", "ours", "official"].includes(view) ? view : "both";
+    const compare = $("ksaCompare");
+    compare.querySelectorAll(".ksa-pane").forEach((p) => {
+      p.hidden = ksaView !== "both" && p.dataset.view !== ksaView;
+    });
+    $("ksaViewSwitch").querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.view === ksaView);
+    });
+    fitKsaPanes();
+  }
+
+  async function renderKsaPair(html, meta) {
+    $("ksaMessageHost").innerHTML = "";
+    $("ksaCompare").hidden = false;
+    selectKsaView("both");
+
+    const common = { cardId: "ksaResultCard", skipTranslate: true };
+    // বাঁয়ে: আমাদের ঠিক করা কার্ড (এক্সট্রা alt fallback-সহ)
+    await renderResult(html, meta, {
+      ...common,
+      hostId: "ksaResultHost",
+      frameId: "ksaOfficialFrame",
+      noMessages: true
+    });
+    // ডানে: অফিশিয়াল HTML-এর হুবহু রেন্ডার — alt, hidden row, কোনো injection নেই
+    await renderResult(html, meta, {
+      ...common,
+      hostId: "ksaOfficialRawHost",
+      frameId: "ksaOfficialRawFrame",
+      exactAlt: true,
+      stripHiddenText: true,
+      lean: true,
+      noInject: true,
+      noMessages: true,
+      silent: true
+    });
+    fitKsaPanes();
+  }
+
+  async function submitKsa(event) {
+    event.preventDefault();
+    if (ksaBusy) return;
+
+    const payload = {
+      SearchingType: "3",
+      ApplicationNumber: $("ksaApplicationNumber").value.trim().toUpperCase(),
+      SponserID: $("ksaPassportNumber").value.trim().toUpperCase(),
+      Captcha: $("ksaCaptcha").value.trim()
+    };
+    const missing = [];
+    if (!payload.ApplicationNumber) missing.push("application number");
+    if (!payload.SponserID) missing.push("passport number");
+    if (!payload.Captcha) missing.push("captcha");
+    if (missing.length) {
+      ksaMessage("warn", "✏️", "Please fill in: <b>" + missing.join(", ") + "</b>");
+      return;
+    }
+    if (!ksaFormReady) {
+      ksaMessage("warn", "⚙️", "Captcha needs the local server — start <code>start.bat</code> and reload this tab.");
+      return;
+    }
+
+    ksaBusy = true;
+    const btn = $("ksaBtnSearch");
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Searching…';
+
+    try {
+      const res = await apiJson("/api/ksa/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        ksaMessage("warn", "⚠️", escapeHtml(translateMessage(res.message)));
+        return;
+      }
+      ksaResultShown = true;
+      await renderKsaPair(res.html, new Date().toLocaleTimeString());
+    } catch (err) {
+      ksaMessage("err", "⚠️", escapeHtml(String(err.message || err)));
+    } finally {
+      ksaBusy = false;
+      btn.disabled = false;
+      btn.innerHTML = original;
+      loadKsaCaptcha();
+      $("ksaCaptcha").focus();
     }
   }
 
@@ -710,6 +1301,22 @@ ${PORTAL_LINKS}
     }
   }
 
+  // local-only tabs: Mofa check / KSA visa check — ফলাফল নিজ নিজ card-এ দেখানো হয়
+  function selectTab(name) {
+    const mofa = name === "mofa";
+    $("tabMofa").classList.toggle("active", mofa);
+    $("tabKsa").classList.toggle("active", !mofa);
+    $("tabMofa").setAttribute("aria-selected", String(mofa));
+    $("tabKsa").setAttribute("aria-selected", String(!mofa));
+    $("searchCard").hidden = !mofa;
+    $("bannerHost").hidden = !mofa;
+    $("resultCard").hidden = !mofa;
+    $("ksaPanel").hidden = mofa;
+    $("ksaResultCard").hidden = !( !mofa && ksaResultShown );
+    document.querySelectorAll(".foot-note").forEach((el) => { el.hidden = !mofa; });
+    if (!mofa) fitKsaPanes();
+  }
+
   // ---------- init ----------
   function init() {
     if (!DATA.nationality.length) {
@@ -723,24 +1330,52 @@ ${PORTAL_LINKS}
     $("embFilter").addEventListener("input", (e) =>
       fillSelect($("embassy"), DATA.embassy, e.target.value, "— choose port of arrival —"));
 
+    $("tabMofa").addEventListener("click", () => selectTab("mofa"));
+    $("tabKsa").addEventListener("click", () => selectTab("ksa"));
+
     $("form").addEventListener("submit", submit);
     $("btnRefresh").addEventListener("click", loadCaptcha);
     $("btnCopy").addEventListener("click", copyData);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeFrameModal($("officialFrame"));
+    $("ksaForm").addEventListener("submit", submitKsa);
+    $("ksaBtnRefresh").addEventListener("click", loadKsaCaptcha);
+    $("ksaCompare").addEventListener("click", (e) => {
+      const btn = e.target.closest(".pane-actions button[data-act]");
+      if (!btn) return;
+      const pane = btn.closest(".pane-actions").dataset.pane;
+      if (btn.dataset.act === "print") ksaPrint(pane);
     });
-    $("passport").addEventListener("input", (e) => {
+    $("ksaViewSwitch").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-view]");
+      if (btn) selectKsaView(btn.dataset.view);
+    });
+    window.addEventListener("resize", fitKsaPanes);
+    if (window.ResizeObserver) {
+      new ResizeObserver(fitKsaPanes).observe($("ksaCompare"));
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      closeFrameModal($("officialFrame"));
+      closeFrameModal($("ksaOfficialFrame"));
+      closeFrameModal($("ksaOfficialRawFrame"));
+    });
+    const upper = (id) => $(id).addEventListener("input", (e) => {
       const pos = e.target.selectionStart;
       e.target.value = e.target.value.toUpperCase();
       e.target.setSelectionRange(pos, pos);
     });
+    upper("passport");
+    upper("ksaApplicationNumber");
+    upper("ksaPassportNumber");
 
     loadCaptcha();
+    loadKsaCaptcha();
   }
 
   // debug hook (handy when the portal changes its result markup)
   window.__ksaDebug = {
-    renderResult, sanitize, translateTree, LABELS,
+    renderResult, renderKsaPair, selectKsaView, fitKsaPanes, sanitize, translateTree,
+    LABELS, loadKsaCaptcha, submitKsa, autoFillKsaFromMofa, findMofaApplicationNo,
+    maybeAutoKsa, mofaIssuedVisaInfo,
     get lastResult() { return lastResult; }
   };
 
