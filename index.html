@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KSA MOFA — Applicant Check</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛂</text></svg>">
+<style>
+  :root{
+    --bg:#f4f6f5; --card:#ffffff; --ink:#12211c; --muted:#61736c;
+    --line:#dfe6e2; --brand:#0a6b46; --brand-2:#0e8a5a; --brand-soft:#e7f4ee;
+    --danger:#b4232a; --danger-soft:#fdecec; --ok:#0a6b46; --ok-soft:#e7f4ee;
+    --warn:#8a5a00; --warn-soft:#fdf3e0; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    font:15px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif;
+    padding:0;
+  }
+  /* ফর্মের গাটার; রেজাল্ট কার্ড অফিশিয়ালের মতো পুরো প্রস্থ নিতে এটি override করে */
+  .wrap{--pad:16px;width:100%;max-width:none;margin:0;padding:var(--pad) var(--pad) 48px}
+  @media (min-width:1024px){ .wrap{--pad:24px;padding:var(--pad) var(--pad) 64px} }
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(145deg,var(--brand),var(--brand-2));
+    display:grid;place-items:center;color:#fff;font-size:22px;box-shadow:0 6px 16px rgba(10,107,70,.25)}
+  h1{font-size:20px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .pill{margin-left:auto;font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);
+    background:#fff;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:#b9c4bf}
+  .pill.on{background:var(--ok-soft);border-color:#bfe3d2;color:var(--ok)}
+  .pill.on .dot{background:var(--ok);box-shadow:0 0 0 3px rgba(10,107,70,.15)}
+  .pill.off{background:var(--warn-soft);border-color:#f0dcb4;color:var(--warn)}
+  .pill.off .dot{background:#c98a00}
+  .pill.checking .dot{background:#98a8a1;animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.25}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:0 1px 2px rgba(16,40,32,.04), 0 10px 30px -18px rgba(16,40,32,.18);padding:22px}
+  .card + .card{margin-top:16px}
+  .card h2{font-size:15.5px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .card .hint{color:var(--muted);font-size:12.5px;margin:0 0 18px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:740px){ .grid{grid-template-columns:1fr} }
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .field.wide{grid-column:1 / -1}
+  label{font-size:12.5px;font-weight:600;color:#29382f;display:flex;justify-content:space-between;gap:8px}
+  label .opt{font-weight:500;color:var(--muted);font-size:11.5px}
+  .ctl{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;
+    font:inherit;color:inherit;outline:none;transition:border-color .15s, box-shadow .15s}
+  .ctl:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(14,138,90,.13)}
+  select.ctl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2361736c' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+  .filter{font-size:13px;padding:7px 10px;border-radius:8px}
+  .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;letter-spacing:.6px}
+
+  .captcha-row{display:flex;gap:10px;align-items:stretch}
+  .captcha-box{width:160px;min-height:54px;border:1px solid var(--line);border-radius:10px;background:
+    repeating-linear-gradient(45deg,#fafcfa,#fafcfa 6px,#f3f7f4 6px,#f3f7f4 12px);
+    display:grid;place-items:center;overflow:hidden;flex:none}
+  .captcha-box img{display:block;width:100%;height:100%;object-fit:contain}
+  .captcha-box .ph{font-size:11.5px;color:var(--muted);text-align:center;padding:6px;line-height:1.3}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;
+    transition:transform .05s, background .15s, border-color .15s, opacity .15s;white-space:nowrap;text-decoration:none}
+  .btn:hover{border-color:#c7d4cd;background:#fbfdfc}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn.primary{background:linear-gradient(145deg,var(--brand),var(--brand-2));border-color:transparent;color:#fff;
+    box-shadow:0 8px 18px -10px rgba(10,107,70,.8)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.icon{padding:10px 13px;font-size:16px;line-height:1}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;align-items:center}
+  .foot-note{color:var(--muted);font-size:12px;margin-top:14px}
+
+  .banner{border-radius:11px;padding:12px 14px;font-size:13.5px;line-height:1.5;display:flex;gap:10px;align-items:flex-start}
+  .banner + .banner{margin-top:10px}
+  .banner .ico{font-size:15px;line-height:1.4}
+  .banner.info{background:var(--brand-soft);color:#0a4b33;border:1px solid #c9e6d8}
+  .banner.warn{background:var(--warn-soft);color:#6d4700;border:1px solid #f0dcb4}
+  .banner.err{background:var(--danger-soft);color:#8c1a20;border:1px solid #f5cdd0}
+  .banner code{background:rgba(0,0,0,.06);padding:1px 6px;border-radius:5px;font-size:12.5px}
+  .orig{opacity:.6;font-size:12px;margin-top:5px;font-family:"Segoe UI",Tahoma,sans-serif}
+
+  /* সার্চের পর শুধু "Entered application" কার্ডটা দেখাই — ওপর/নিচের বার বাদ */
+  #resultCard{display:none;padding:0;border:0;box-shadow:none;background:transparent;
+    width:calc(100% + 2 * var(--pad));margin:16px calc(-1 * var(--pad)) 0}
+  #resultCard.show{display:block}
+  #officialFrame{display:block;margin:0;border:0;border-radius:0;background:transparent}
+  @media print{
+    body{background:#fff;padding:0}
+    /* প্রিন্টে শুধু অফিশিয়াল কার্ড — ফর্মের হেডার/হিন্ট/বাটন কিছুই আসবে না */
+    header.top,#searchCard,.foot-note,#bannerHost{display:none !important}
+    .wrap{padding:0}
+    .card{border:0;box-shadow:none;padding:0}
+    #resultCard{display:block !important;width:100%;margin:0}
+  }
+  details.raw{margin-top:12px}
+  details.raw summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+  details.raw pre{margin:10px 0 0;max-height:340px;overflow:auto;font-size:12px;text-align:left;
+    background:#0f1b16;color:#d7e6de;padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+
+
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;
+    animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">🛂</div>
+    <div>
+      <h1>KSA MOFA — Applicant Check</h1>
+      <div class="sub">Look up a submitted visa application · runs on your own machine</div>
+    </div>
+    <span class="pill checking" id="statusPill"><span class="dot"></span><span id="statusText">Checking…</span></span>
+  </header>
+
+  <div id="bannerHost"></div>
+
+  <section class="card" id="searchCard">
+    <h2>🔎 Find an applicant</h2>
+    <p class="hint">Same fields as the Saudi visa portal's “applicant application search”. Arabic labels are translated for you.</p>
+
+    <form id="form" autocomplete="off" novalidate>
+      <div class="grid">
+        <div class="field">
+          <label for="passport">Passport number <span class="opt">as printed</span></label>
+          <input id="passport" name="PassportNumber" class="ctl mono" maxlength="20" placeholder="A01234567"
+                 spellcheck="false" autocapitalize="characters" required>
+        </div>
+
+        <div class="field">
+          <label for="visaType">Visa type</label>
+          <select id="visaType" name="VisaType" class="ctl" required></select>
+        </div>
+
+        <div class="field">
+          <label for="natFilter">Current nationality <span class="opt">type to filter</span></label>
+          <input id="natFilter" class="ctl filter" placeholder="e.g. bangladesh, BGD, বাংলাদেশ">
+          <select id="nationality" name="Nationality" class="ctl" required></select>
+        </div>
+
+        <div class="field">
+          <label for="embFilter">Port of arrival / embassy <span class="opt">type to filter</span></label>
+          <input id="embFilter" class="ctl filter" placeholder="e.g. dhaka, 218">
+          <select id="embassy" name="Embassy" class="ctl" required></select>
+        </div>
+
+        <div class="field wide">
+          <label for="captcha">Image code (captcha) <span class="opt">must be typed by hand</span></label>
+          <div class="captcha-row">
+            <div class="captcha-box" id="captchaBox">
+              <div class="ph" id="captchaPh">Image appears when the server is running</div>
+            </div>
+            <input id="captcha" name="Captcha" class="ctl mono" maxlength="6" placeholder="6 characters"
+                   style="max-width:220px" spellcheck="false" autocomplete="off" required>
+            <button type="button" class="btn icon" id="btnRefresh" title="New captcha">⟳</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn primary" id="btnSearch">Check application</button>
+        <button type="button" class="btn" id="btnCopy">Copy values</button>
+        <a class="btn" href="https://visa.mofa.gov.sa/visaperson/getapplicantdata" target="_blank" rel="noopener">Official site ↗</a>
+      </div>
+      <p class="foot-note">Only query your own (or your organisation's) passport numbers. The captcha exists to verify a human — it is never bypassed, every lookup needs a fresh code.</p>
+    </form>
+  </section>
+
+  <section class="card" id="resultCard">
+    <div id="resultHost"></div>
+  </section>
+
+  <p class="foot-note" style="text-align:center;margin-top:22px">
+    Local tool · requests go straight from your machine to <code>visa.mofa.gov.sa</code>, no third-party server involved.
+  </p>
+</div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const DATA = window.MOFA_DATA || { nationality: [], visaType: [], embassy: [], labels: {} };
+  const LABELS = DATA.labels || {};
+  const STORE = "ksaMofaCheck.v2";
+  const HOSTED = !/^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+  let formReady = false;
+  let busy = false;
+  let lastResult = null;     // { html, meta }
+
+  // ---------- dropdowns ----------
+  function label(item) {
+    const name = item.en || item.t || item.v;
+    return `${name} — ${item.v}`;
+  }
+  function haystack(item) {
+    return [item.v, item.en, item.bn, item.t].filter(Boolean).join(" ").toLowerCase();
+  }
+  function fillSelect(select, items, query, placeholder) {
+    const q = (query || "").trim().toLowerCase();
+    const prev = select.value;
+    select.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = placeholder;
+    select.appendChild(ph);
+
+    const list = q ? items.filter((it) => haystack(it).includes(q)) : items;
+    for (const it of list) {
+      const opt = document.createElement("option");
+      opt.value = it.v;
+      opt.textContent = label(it);
+      select.appendChild(opt);
+    }
+    if ([...select.options].some((o) => o.value === prev)) select.value = prev;
+  }
+  function buildSelects() {
+    fillSelect($("visaType"), DATA.visaType, "", "— choose visa type —");
+    fillSelect($("nationality"), DATA.nationality, "", "— choose nationality —");
+    fillSelect($("embassy"), DATA.embassy, "", "— choose port of arrival —");
+  }
+
+  // ---------- ui helpers ----------
+  function banner(kind, icon, html) {
+    const el = document.createElement("div");
+    el.className = "banner " + kind;
+    el.innerHTML = `<span class="ico">${icon}</span><div>${html}</div>`;
+    $("bannerHost").appendChild(el);
+  }
+  const clearBanners = () => { $("bannerHost").innerHTML = ""; };
+
+  // অফিশিয়াল result page-র #printPage হ্যান্ডলার ঠিক যেমন আছে তেমনি:
+  // print-এর আগে container 655px, printFrame border, contentmid padding; পরে আবার restore
+  function officialPrint(frame) {
+    const sr = frame && frame.shadowRoot;
+    if (!sr) return;
+    const container = sr.querySelector(".container");
+    const printFrame = sr.querySelector(".printFrame");
+    const contentmid = sr.querySelector(".contentmid");
+    const saved = {
+      containerWidth: container ? container.style.width : "",
+      printFrameBorder: printFrame ? printFrame.style.border : "",
+      contentmidPadding: contentmid ? contentmid.style.padding : ""
+    };
+    const hidden = [];
+    sr.querySelectorAll(".breadcrumb,h3.form-title,.importantInfo,.btndiv,.footer,.formhead,.logo,.contenttop,.contentbottom")
+      .forEach((el) => { hidden.push([el, el.style.display]); el.style.display = "none"; });
+    if (container) container.style.width = "655px";
+    if (printFrame) printFrame.style.border = "1px solid #8a8a8a";
+    if (contentmid) contentmid.style.padding = "0 0 0 0";
+
+    window.print();
+
+    hidden.forEach(([el, display]) => { el.style.display = display; });
+    if (container) container.style.width = saved.containerWidth;
+    if (printFrame) printFrame.style.border = saved.printFrameBorder;
+    if (contentmid) contentmid.style.padding = saved.contentmidPadding;
+  }
+
+  // shadow DOM-এর ভেতরের অফিশিয়াল মোডাল বন্ধ করা
+  function closeFrameModal(frame) {
+    const sr = frame && frame.shadowRoot;
+    if (!sr) return;
+    const modal = sr.getElementById("frameModal");
+    if (!modal) return;
+    modal.classList.remove("in");
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  function setStatus(state, text) {
+    $("statusPill").className = "pill " + state;
+    $("statusText").textContent = text;
+  }
+
+  async function apiJson(path, options) {
+    const res = await fetch(path, Object.assign({ cache: "no-store" }, options || {}));
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error("Server did not return JSON (HTTP " + res.status + ")"); }
+    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  // ---------- captcha ----------
+  async function loadCaptcha() {
+    const box = $("captchaBox");
+    try {
+      const data = await apiJson("/api/form");
+      formReady = true;
+      setStatus("on", HOSTED ? "Server: running" : "Local server: running");
+      box.innerHTML = "";
+      const img = new Image();
+      img.alt = "captcha";
+      img.src = "/api/captcha?k=" + encodeURIComponent(data.captchaKey) + "&r=" + Math.random();
+      img.onerror = () => { box.innerHTML = '<div class="ph">Image failed<br>click ⟳</div>'; };
+      box.appendChild(img);
+      $("captcha").value = "";
+    } catch (err) {
+      formReady = false;
+      setStatus("off", HOSTED ? "Server: offline" : "Local server: offline");
+      box.innerHTML = HOSTED
+        ? '<div class="ph">Server offline<br>reload this page</div>'
+        : '<div class="ph">Captcha needs the<br>local server</div>';
+      showOfflineHelp(String(err.message || err));
+    }
+  }
+
+  let offlineShown = false;
+  function showOfflineHelp(reason) {
+    if (offlineShown) return;
+    offlineShown = true;
+    banner("warn", "⚙️", HOSTED
+      ? `<b>Hosted server is starting:</b> wait a few seconds and reload this page, then type a fresh captcha.
+         <br><span style="opacity:.75">(${escapeHtml(reason)})</span>`
+      : `<b>One step needed:</b> opening the file directly (double-click) blocks cross-site requests, so the lookup cannot run.
+         Double-click <code>start.bat</code> in this folder (or run <code>python server.py</code>) and use the tab that opens automatically.
+         <br><span style="opacity:.75">(${escapeHtml(reason)})</span>`);
+  }
+
+  // ---------- sanitising + translating the returned page ----------
+  const ALLOWED = new Set([
+    "DIV","SPAN","P","BR","HR","B","STRONG","I","EM","U","SMALL","LABEL","A",
+    "TABLE","THEAD","TBODY","TFOOT","TR","TD","TH","CAPTION","UL","OL","LI",
+    "H1","H2","H3","H4","H5","H6","PRE","DL","DT","DD","IMG"
+  ]);
+
+  // অফিশিয়াল ইনলাইন স্টাইল (যেমন color:#790018) রাখি, কিন্তু url()/expression()/@import বাদ দিই
+  const UNSAFE_STYLE = /@import|expression\s*\(|url\s*\(/gi;
+  function safeStyle(value) {
+    return String(value || "").replace(UNSAFE_STYLE, "").trim();
+  }
+
+  function sanitize(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const out = document.createElement("div");
+    const walk = (src, dst) => {
+      for (const node of src.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) { dst.appendChild(document.createTextNode(node.nodeValue)); continue; }
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        const tag = node.tagName.toUpperCase();
+        // FORM-এর ভেতরেই পোর্টাল ফলাফল ( nmreq, declaration ) রাখে — ফর্ম ট্যাগ বাদ দিয়ে ভেতরের contents রাখি
+        if (["SCRIPT","STYLE","LINK","META","IFRAME","FRAME","OBJECT","EMBED","INPUT",
+             "SELECT","TEXTAREA","BUTTON","SVG","VIDEO","AUDIO","CANVAS"].includes(tag)) continue;
+        // লুকানো ব্লক (error modal, cookie bar, dropdown menu) বাদ — নইলে ওদের লেখা ফলাফল ভেবে ভুল হয়
+        const style = (node.getAttribute("style") || "").toLowerCase();
+        const cls = (node.getAttribute("class") || "").toLowerCase().split(/\s+/);
+        const skipClasses = ["modal", "fade", "hidden", "hide", "dropdown-menu", "navbar"];
+        if (node.hasAttribute("hidden") || /display\s*:\s*none/.test(style) ||
+            cls.some((c) => skipClasses.includes(c))) continue;
+        if (!ALLOWED.has(tag)) { walk(node, dst); continue; }
+        const el = document.createElement(tag.toLowerCase());
+        // ছবিগুলো লোকাল প্রক্সি দিয়ে আনি — পোর্টালের session cookie ব্রাউজারের থাকে না
+        if (tag === "IMG") {
+          const src = node.getAttribute("src") || "";
+          let local = "";
+          let m;
+          if ((m = src.match(/\/VisaPerson\/GetPersonPhoto\?key=([^&"']+)/i))) {
+            local = "/api/image?type=photo&key=" + encodeURIComponent(m[1]);
+          } else if ((m = src.match(/\/Base\/GenerateBarCode\?key=([^&"']+)/i))) {
+            local = "/api/image?type=barcode&key=" + encodeURIComponent(m[1]);
+          } else if ((m = src.match(/\/Base\/GetRandomCaptchaImage\/(\d+)/i))) {
+            local = "/api/captcha?k=" + encodeURIComponent(m[1]);
+          } else if (/\/assets\/common\/images\/MOFA_logo\.png/i.test(src)) {
+            local = "/api/image?type=logo";
+          }
+          if (!local) continue;
+          el.setAttribute("src", local);
+          el.setAttribute("alt", node.getAttribute("alt") || (local.includes("photo") ? "Applicant photo" : "Barcode"));
+          for (const attr of ["id", "class", "width", "height"]) {
+            const v = node.getAttribute(attr);
+            if (v) el.setAttribute(attr, v);
+          }
+          const imgStyle = safeStyle(node.getAttribute("style"));
+          if (imgStyle) el.setAttribute("style", imgStyle);
+          dst.appendChild(el);
+          continue;
+        }
+        for (const attr of ["id", "colspan", "rowspan", "dir", "class", "href", "target"]) {
+          const v = node.getAttribute(attr);
+          if (v) el.setAttribute(attr, v);
+        }
+        const nodeStyle = safeStyle(node.getAttribute("style"));
+        if (nodeStyle) el.setAttribute("style", nodeStyle);
+        if (tag === "A" && !/^https?:\/\//i.test(el.getAttribute("href") || "")) el.removeAttribute("href");
+        dst.appendChild(el);
+        walk(node, el);
+      }
+    };
+    walk(doc.body, out);
+    return out;
+  }
+
+  const ARABIC = /[\u0600-\u06FF]/;
+  let longKeys = null;
+
+  function translateTree(root) {
+    if (!Object.keys(LABELS).length) return;
+    if (!longKeys) {
+      longKeys = Object.entries(LABELS)
+        .filter(([ar]) => ar.length > 8)
+        .sort((a, b) => b[0].length - a[0].length);
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    for (const node of nodes) {
+      const raw = node.nodeValue;
+      const key = raw.replace(/[\s:：]+$/, "").trim();
+      if (!key) continue;
+      if (LABELS[key]) { node.nodeValue = raw.replace(key, LABELS[key]); continue; }
+      if (key.length > 8 && ARABIC.test(key)) {
+        let text = raw;
+        for (const [ar, en] of longKeys) {
+          if (text.includes(ar)) text = text.split(ar).join(en);
+        }
+        if (text !== raw) node.nodeValue = text;
+      }
+    }
+    // remove leftover empty labels, keep the page tidy
+    root.querySelectorAll("label, .lbl").forEach((el) => {
+      if (!el.textContent.trim()) el.remove();
+    });
+  }
+
+  // ---------- rendering ----------
+  // পোর্টাল ফলাফলটা HTML-এ না লিখে JS দিয়ে দেখায়:  ShowMessage('title', 'text', 'color')
+  const MSG_RULES = [
+    [/لم يتم إصدار التأشيرة|لم تصدر التأشيرة/, () => "Visa not issued"],
+    [/تم إصدار التأشيرة برقم\s*([0-9]{4,})/, (m) => `Visa issued — visa number ${m[1]}`],
+    [/تم إصدار التأشيرة/, () => "Visa issued"],
+    [/لم يتم العثور على اي نتائج|لا توجد نتائج/, () => "No application found for these details"],
+    [/رمز الصورة/, () => "Image code (captcha) is wrong — try a new code"],
+    [/من فضلك ادخل رقم التأشيرة ورقم الجواز/, () => "Please enter the visa number and passport number"],
+    [/عفوا حدث خطأ/, () => "The portal reported an error — usually a wrong captcha or an expired session"],
+  ];
+
+  function translateMessage(text) {
+    const src = String(text || "").trim();
+    for (const [re, fn] of MSG_RULES) {
+      const m = src.match(re);
+      if (m) return fn(m);
+    }
+    let out = src;
+    for (const [ar, en] of Object.entries(LABELS)) {
+      if (ar && out.includes(ar)) out = out.split(ar).join(en);
+    }
+    return out;
+  }
+
+  function portalMessages(rawHtml) {
+    const found = [];
+    const re = /ShowMessage\(\s*(['"])([\s\S]*?)\1\s*,\s*(['"])([\s\S]*?)\3\s*(?:,\s*(['"])([\s\S]*?)\5\s*)?\)/g;
+    let m;
+    while ((m = re.exec(rawHtml))) {
+      if (m[4] && m[4].trim()) {
+        found.push({ title: m[2].trim(), text: m[4].trim(), color: (m[6] || "").trim() });
+      }
+    }
+    return found;
+  }
+
+  // অফিশিয়াল পোর্টালের CSS-গুলো shadow DOM-এর ভেতরে লোড করি।
+  // /assets/... প্রক্সি CSS-এর ভেতরের relative URL-ও local path-এ বদলে দেয়।
+  const PORTAL_LINKS = [
+    "/assets/common/plugins/font-awesome/css/font-awesome.min.css",
+    "/assets/common/plugins/bootstrap/css/bootstrap.min.ltr.css",
+    "/assets/common/plugins/select2/select2.css",
+    "/assets/ltr/css/components-rounded.css",
+    "/assets/ltr/css/plugins.css",
+    "/assets/ltr/css/layout.css",
+    "/assets/common/plugins/jquery-ui/jquery-ui.min.css",
+    "/assets/ltr/css/custom.v3.css?v=202319121",
+    "/assets/ltr/css/internal.v3.css",
+    "/assets/ltr/css/print.css"
+  ].map((href, i) => `<link rel="stylesheet" href="${href}"${i === 9 ? ' media="print"' : ""}>`).join("\n");
+
+  function officialShell() {
+    // শুধু অফিশিয়াল "Entered application" কার্ড + ShowMessage মোডাল; হেডার/ফুটার/বার বাদ
+    // কোনো custom font/padding/grid override নেই — পোর্টালের নিজস্ব CSS-ই মাপ ঠিক করবে
+    return `
+<style>
+  :host{display:block;background:#fff;color:#403f68;font:17px/1.42857143 "Open Sans",sans-serif}
+  .official-page{background:#fff}
+  .official-page #frameModal{display:none}
+  .official-page #frameModal.in{display:block}
+</style>
+${PORTAL_LINKS}
+<div class="official-page lang-en">
+  <div id="msg" class="hidden-print">
+    <div class="modal fade" id="frameModal" style="z-index:11050" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog" role="document"><div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" id="frameModalX" aria-label="Close"><span aria-hidden="true">×</span></button>
+          <h4 class="modal-title" id="frameModalTitle">Visa platform</h4>
+        </div>
+        <div class="modal-body" style="font-size:medium">
+          <div class="note note-bordered note-danger"><p id="frameModalText"></p></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn green" id="frameModalClose">Close</button></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="page-content" id="content"><div class="container"><div class="page-content-inner">
+    <div class="row"><div class="col-md-12" id="officialPortletSlot"></div></div>
+  </div></div></div>
+</div>`;
+  }
+
+  async function renderResult(rawHtml, meta) {
+    lastResult = { html: rawHtml, meta };
+    const card = $("resultCard");
+    const host = $("resultHost");
+    host.innerHTML = "";
+
+    const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+    // ".portlet" নিলে "Entered application" শিরোনামও সাথে আসে (অফিশিয়াল পেজের মতো)
+    const hasPortlet = !!doc.querySelector(".portlet");
+    const block = doc.querySelector(".portlet") || doc.querySelector(".portlet-body") || doc.querySelector("form") || doc.body;
+    const clean = sanitize(block.outerHTML);
+
+    // অনুবাদের আগেই আসল লেখা ধরে রাখি — নইলে "no results" বার্তা অনুবাদ হয়ে গিয়ে চেনা যায় না
+    const rawText = (clean.textContent || "").replace(/\s+/g, " ").trim();
+    const notFound = /لم يتم العثور على اي نتائج|لا توجد نتائج|no results found/i.test(rawText);
+    const failed = !notFound && (/عفوا حدث خطأ|unexpected error/i.test(rawText) || rawText.length < 25);
+    const msgs = portalMessages(rawHtml).map((m) => ({ ...m, en: translateMessage(m.text) }));
+    const showDetails = hasPortlet && !notFound && !failed && (clean.textContent || "").replace(/\s+/g, "").length > 40;
+
+    translateTree(clean);
+
+    // অফিশিয়াল পেজটা সরাসরি ফর্মের নিচে বসাই — নতুন ট্যাব বা অতিরিক্ত ক্লিক নেই
+    const frame = document.createElement("div");
+    frame.id = "officialFrame";
+    frame.attachShadow({ mode: "open" }).innerHTML = officialShell();
+    host.appendChild(frame);
+    const sr = frame.shadowRoot;
+
+    // পোর্টালের CSS আগে লোড না হলে ফন্ট/মাপ ভুল দেখায় — স্টাইলশিটগুলোর অপেক্ষা করি
+    const links = Array.from(sr.querySelectorAll('link[rel="stylesheet"]'));
+    await Promise.all(links.map((link) => new Promise((resolve) => {
+      if (link.sheet) return resolve();
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      link.addEventListener("load", finish, { once: true });
+      link.addEventListener("error", finish, { once: true });
+    })));
+
+    const slot = sr.getElementById("officialPortletSlot");
+
+    if (showDetails) {
+      slot.appendChild(clean);
+      const actions = document.createElement("div");
+      actions.className = "form-actions fluid right";
+      // অফিশিয়াল result page-র হুবহু markup
+      actions.innerHTML = '<div class="row"><div class="col-md-12">' +
+        '<input id="printPage" type="button" class="btn btn-default pull-left" value=Print onclick="javascript: window.print();" />' +
+        '<a class="btn btn-default" href="/"><span>Back</span></a>' +
+        '</div></div>';
+      // অফিশিয়াল portlet-এর ভেতরেই বাটনগুলো বসে — বাইরে নয়
+      (clean.querySelector(".form-body") || clean.querySelector(".portlet-body") || clean).appendChild(actions);
+
+      // ইনলাইন onclick-এর পাশাপাশি jQuery হ্যান্ডলার থাকে; দুইবার print না ঠেকাতে
+      // capture-phasে সেটা আটকিয়ে অফিশিয়াল CSS-টুইকসহ একবার print করি
+      sr.addEventListener("click", (e) => {
+        if (!e.target || e.target.id !== "printPage") return;
+        e.stopPropagation();
+        officialPrint(frame);
+      }, true);
+    } else {
+      const alert = document.createElement("div");
+      alert.className = "alert " + (failed ? "alert-danger" : "alert-warning");
+      let text;
+      if (msgs.length) text = msgs.map((m) => m.en).join("\n");
+      else if (notFound) text = "Nothing found for these details. Double-check the passport number, nationality, visa type and port of arrival.";
+      else if (failed) text = "The portal did not return a valid result. Usually this means a wrong captcha or an expired session — load a new code and try again.";
+      else text = "The portal returned a message for this lookup.";
+      alert.textContent = text;
+      alert.style.whiteSpace = "pre-line";
+      slot.appendChild(alert);
+    }
+
+    // পোর্টালের ShowMessage() ডায়ালগ — অফিশিয়াল পেজের মতোই
+    if (msgs.length) {
+      sr.getElementById("frameModalTitle").textContent = msgs[0].title || "Visa platform";
+      sr.getElementById("frameModalText").textContent = msgs.map((m) => m.en).join("\n");
+      const modal = sr.getElementById("frameModal");
+      modal.style.display = "block";
+      modal.classList.add("in");
+      modal.setAttribute("aria-hidden", "false");
+    }
+    sr.getElementById("frameModalClose").addEventListener("click", () => closeFrameModal(frame));
+    sr.getElementById("frameModalX").addEventListener("click", () => closeFrameModal(frame));
+
+    card.classList.add("show");
+  }
+
+  // ---------- actions ----------
+  async function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+
+    const payload = {
+      PassportNumber: $("passport").value.trim().toUpperCase(),
+      Nationality: $("nationality").value,
+      VisaType: $("visaType").value,
+      Embassy: $("embassy").value,
+      Captcha: $("captcha").value.trim()
+    };
+
+    const missing = [];
+    if (!payload.PassportNumber) missing.push("passport number");
+    if (!payload.Nationality) missing.push("nationality");
+    if (!payload.VisaType) missing.push("visa type");
+    if (!payload.Embassy) missing.push("port of arrival");
+    if (!payload.Captcha) missing.push("image code");
+    if (missing.length) {
+      clearBanners();
+      banner("warn", "✏️", "Please fill in: <b>" + missing.join(", ") + "</b>");
+      return;
+    }
+
+    if (!formReady) {
+      clearBanners();
+      showOfflineHelp(HOSTED ? "hosted server not reachable" : "local helper not reachable");
+      if (!HOSTED) banner("warn", "▶️", "Start it with <code>start.bat</code>, then reload this tab.");
+      return;
+    }
+
+    busy = true;
+    const btn = $("btnSearch");
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Searching…';
+    clearBanners();
+    saveState(payload);
+
+    try {
+      const res = await apiJson("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      await renderResult(res.html, new Date().toLocaleTimeString());
+    } catch (err) {
+      $("resultCard").classList.add("show");
+      $("resultHost").innerHTML =
+        `<div class="banner err"><span class="ico">⚠️</span><div>${escapeHtml(String(err.message || err))}</div></div>`;
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.innerHTML = original;
+      loadCaptcha();
+      $("captcha").focus();
+    }
+  }
+
+  function saveState(payload) {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({
+        PassportNumber: payload.PassportNumber,
+        Nationality: payload.Nationality,
+        VisaType: payload.VisaType,
+        Embassy: payload.Embassy
+      }));
+    } catch { /* storage blocked */ }
+  }
+
+  function restoreState() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch { return; }
+    if (!saved) return;
+    if (saved.PassportNumber) $("passport").value = saved.PassportNumber;
+    for (const [id, key] of [["nationality", "Nationality"], ["visaType", "VisaType"], ["embassy", "Embassy"]]) {
+      const sel = $(id);
+      if (saved[key] && [...sel.options].some((o) => o.value === saved[key])) sel.value = saved[key];
+    }
+  }
+
+  async function copyData() {
+    const pick = (sel) => sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "—";
+    const lines = [
+      "PassportNumber: " + $("passport").value.trim().toUpperCase(),
+      "Nationality: " + $("nationality").value + "  (" + pick($("nationality")) + ")",
+      "VisaType: " + $("visaType").value + "  (" + pick($("visaType")) + ")",
+      "Embassy: " + $("embassy").value + "  (" + pick($("embassy")) + ")",
+      "URL: https://visa.mofa.gov.sa/visaperson/getapplicantdata"
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(lines);
+      banner("info", "📋", "Values copied — paste them on the official site if you prefer.");
+    } catch {
+      banner("info", "📋", "<pre style='margin:6px 0 0;white-space:pre-wrap'>" + escapeHtml(lines) + "</pre>");
+    }
+  }
+
+  // ---------- init ----------
+  function init() {
+    if (!DATA.nationality.length) {
+      banner("err", "📦", "No data found — <code>data.js</code> is missing or broken. Run <code>python update-data.py</code>.");
+    }
+    buildSelects();
+    restoreState();
+
+    $("natFilter").addEventListener("input", (e) =>
+      fillSelect($("nationality"), DATA.nationality, e.target.value, "— choose nationality —"));
+    $("embFilter").addEventListener("input", (e) =>
+      fillSelect($("embassy"), DATA.embassy, e.target.value, "— choose port of arrival —"));
+
+    $("form").addEventListener("submit", submit);
+    $("btnRefresh").addEventListener("click", loadCaptcha);
+    $("btnCopy").addEventListener("click", copyData);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeFrameModal($("officialFrame"));
+    });
+    $("passport").addEventListener("input", (e) => {
+      const pos = e.target.selectionStart;
+      e.target.value = e.target.value.toUpperCase();
+      e.target.setSelectionRange(pos, pos);
+    });
+
+    loadCaptcha();
+  }
+
+  // debug hook (handy when the portal changes its result markup)
+  window.__ksaDebug = {
+    renderResult, sanitize, translateTree, LABELS,
+    get lastResult() { return lastResult; }
+  };
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>

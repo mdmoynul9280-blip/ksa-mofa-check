@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ksa-mofa-check
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python server-online.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    healthCheckPath: /api/health
